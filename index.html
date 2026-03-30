@@ -254,7 +254,7 @@ function randomNext() {
 }
 
 function resizeCanvas() {
-  const maxW = Math.min(window.innerWidth - 16, 380);
+  const maxW = Math.min(window.innerWidth - 16, 300);
   CELL = Math.floor(maxW / COLS);
   canvasW = CELL * COLS;
   canvasH = CELL * ROWS;
