@@ -394,7 +394,7 @@ function drawFrog(ctx, cx, cy, radius, level, time) {
 
   // Number label
   ctx.fillStyle = f.dark ? '#fff' : '#000';
-  ctx.font = `bold ${Math.round(r * 0.42)}px ${getComputedStyle(document.body).fontFamily}`;
+  ctx.font = `bold ${Math.round(r * 0.65)}px ${getComputedStyle(document.body).fontFamily}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(f.name, cx, cy + r * 0.12);
