@@ -809,11 +809,13 @@ function spawnScorePopup(x, y, text) {
 // === Game over ===
 function checkGameOver() {
   for (let c = 0; c < COLS; c++) {
-    if (grid[c].length < ROWS) return;
+    if (grid[c].length >= ROWS) {
+      gameOver = true;
+      finalScoreEl.textContent = score;
+      modalOverlay.classList.add('show');
+      return;
+    }
   }
-  gameOver = true;
-  finalScoreEl.textContent = score;
-  modalOverlay.classList.add('show');
 }
 
 // === Undo ===
