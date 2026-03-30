@@ -279,6 +279,18 @@ function drawFrog(ctx, cx, cy, radius, level, time) {
     bellyColor = `hsl(${(hue + 40) % 360}, 80%, 75%)`;
   }
 
+  // Darker shade for legs/details
+  function darken(color, amt) {
+    const c = document.createElement('canvas').getContext('2d');
+    c.fillStyle = color;
+    const hex = c.fillStyle;
+    const rr = Math.max(0, parseInt(hex.slice(1,3),16) - amt);
+    const gg = Math.max(0, parseInt(hex.slice(3,5),16) - amt);
+    const bb = Math.max(0, parseInt(hex.slice(5,7),16) - amt);
+    return `rgb(${rr},${gg},${bb})`;
+  }
+  const legColor = f.rainbow ? bodyColor : darken(f.body, 30);
+
   // Cosmic background glow
   if (f.cosmic) {
     const grd = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r * 1.8);
@@ -289,115 +301,220 @@ function drawFrog(ctx, cx, cy, radius, level, time) {
     ctx.beginPath();
     ctx.arc(cx, cy, r * 1.8, 0, Math.PI * 2);
     ctx.fill();
-    // Stars
     for (let i = 0; i < 6; i++) {
       const a = (time * 0.5 + i * 1.05) % (Math.PI * 2);
       const d = r * (1.1 + 0.3 * Math.sin(time * 2 + i));
-      const sx = cx + Math.cos(a) * d;
-      const sy = cy + Math.sin(a) * d;
       ctx.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(time * 3 + i)})`;
       ctx.beginPath();
-      ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+      ctx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, 1.2, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
-  // Back legs
-  ctx.fillStyle = bodyColor;
-  const legW = r * 0.3, legH = r * 0.22;
+  // === BACK LEGS (bent, frog-like) ===
+  ctx.fillStyle = legColor;
+  // Left back leg - thigh
+  ctx.save();
+  ctx.translate(cx - r * 0.45, cy + r * 0.25);
+  ctx.rotate(-0.6);
   ctx.beginPath();
-  ctx.ellipse(cx - r * 0.65, cy + r * 0.55, legW, legH, -0.3, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, r * 0.14, r * 0.32, 0, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
+  // Left back leg - shin
+  ctx.save();
+  ctx.translate(cx - r * 0.7, cy + r * 0.5);
+  ctx.rotate(0.4);
   ctx.beginPath();
-  ctx.ellipse(cx + r * 0.65, cy + r * 0.55, legW, legH, 0.3, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, r * 0.1, r * 0.25, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  // Left back foot (webbed)
+  ctx.fillStyle = legColor;
+  const lfx = cx - r * 0.82, lfy = cy + r * 0.7;
+  for (let t = -1; t <= 1; t++) {
+    ctx.beginPath();
+    ctx.ellipse(lfx + t * r * 0.07, lfy, r * 0.06, r * 0.12, t * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Right back leg - thigh
+  ctx.save();
+  ctx.translate(cx + r * 0.45, cy + r * 0.25);
+  ctx.rotate(0.6);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.14, r * 0.32, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  // Right back leg - shin
+  ctx.save();
+  ctx.translate(cx + r * 0.7, cy + r * 0.5);
+  ctx.rotate(-0.4);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.1, r * 0.25, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  // Right back foot (webbed)
+  const rfx = cx + r * 0.82, rfy = cy + r * 0.7;
+  for (let t = -1; t <= 1; t++) {
+    ctx.beginPath();
+    ctx.ellipse(rfx + t * r * 0.07, rfy, r * 0.06, r * 0.12, t * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // === FRONT LEGS (arms reaching forward) ===
+  ctx.fillStyle = legColor;
+  // Left front arm
+  ctx.save();
+  ctx.translate(cx - r * 0.5, cy + r * 0.1);
+  ctx.rotate(-0.3);
+  ctx.beginPath();
+  ctx.ellipse(0, r * 0.15, r * 0.08, r * 0.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  // Left front hand (webbed toes)
+  const lhx = cx - r * 0.6, lhy = cy + r * 0.42;
+  for (let t = -1; t <= 1; t++) {
+    ctx.beginPath();
+    ctx.ellipse(lhx + t * r * 0.05, lhy, r * 0.04, r * 0.09, t * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Right front arm
+  ctx.save();
+  ctx.translate(cx + r * 0.5, cy + r * 0.1);
+  ctx.rotate(0.3);
+  ctx.beginPath();
+  ctx.ellipse(0, r * 0.15, r * 0.08, r * 0.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  // Right front hand (webbed toes)
+  const rhx = cx + r * 0.6, rhy = cy + r * 0.42;
+  for (let t = -1; t <= 1; t++) {
+    ctx.beginPath();
+    ctx.ellipse(rhx + t * r * 0.05, rhy, r * 0.04, r * 0.09, t * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // === BODY (wide, squatty frog shape) ===
+  ctx.fillStyle = bodyColor;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + r * 0.05, r * 0.58, r * 0.48, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Front legs
+  // Head (slightly wider on top, merges with body)
   ctx.beginPath();
-  ctx.ellipse(cx - r * 0.55, cy + r * 0.35, legW * 0.7, legH * 0.7, -0.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(cx + r * 0.55, cy + r * 0.35, legW * 0.7, legH * 0.7, 0.2, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Body
-  ctx.fillStyle = bodyColor;
-  ctx.beginPath();
-  ctx.ellipse(cx, cy, r * 0.72, r * 0.62, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy - r * 0.22, r * 0.52, r * 0.35, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // Dark tint overlay
   if (f.dark) {
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.beginPath();
-    ctx.ellipse(cx, cy, r * 0.72, r * 0.62, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy, r * 0.58, r * 0.5, 0, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Belly
+  // === BELLY (lighter underbelly) ===
   ctx.fillStyle = bellyColor;
   ctx.beginPath();
-  ctx.ellipse(cx, cy + r * 0.1, r * 0.45, r * 0.38, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy + r * 0.15, r * 0.38, r * 0.32, 0, 0, Math.PI * 2);
   ctx.fill();
+
+  // === SPOTS (darker markings on back) ===
+  if (!f.rainbow && !f.dark) {
+    ctx.fillStyle = darken(f.body, 20);
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath(); ctx.arc(cx - r * 0.2, cy - r * 0.1, r * 0.08, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + r * 0.15, cy - r * 0.05, r * 0.06, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + r * 0.05, cy - r * 0.25, r * 0.05, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
 
   // Shimmer
   if (f.shimmer) {
-    const shimX = cx - r * 0.2 + Math.sin(time * 3) * r * 0.15;
+    const shimX = cx - r * 0.15 + Math.sin(time * 3) * r * 0.1;
     const shimY = cy - r * 0.15;
-    const grad = ctx.createRadialGradient(shimX, shimY, 0, shimX, shimY, r * 0.35);
-    grad.addColorStop(0, 'rgba(255,255,255,0.35)');
+    const grad = ctx.createRadialGradient(shimX, shimY, 0, shimX, shimY, r * 0.3);
+    grad.addColorStop(0, 'rgba(255,255,255,0.4)');
     grad.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.ellipse(shimX, shimY, r * 0.35, r * 0.2, -0.3, 0, Math.PI * 2);
+    ctx.ellipse(shimX, shimY, r * 0.3, r * 0.18, -0.3, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Eyes
-  const eyeR = r * 0.16;
-  const eyeY = cy - r * 0.22;
-  const eyeSpacing = r * 0.28;
+  // === MOUTH (wide frog smile) ===
+  ctx.strokeStyle = darken(f.body, 50);
+  ctx.lineWidth = Math.max(1, r * 0.04);
+  ctx.beginPath();
+  ctx.arc(cx, cy + r * 0.05, r * 0.28, 0.15, Math.PI - 0.15, false);
+  ctx.stroke();
+  // Nostrils
+  ctx.fillStyle = darken(f.body, 60);
+  ctx.beginPath(); ctx.arc(cx - r * 0.12, cy - r * 0.2, r * 0.03, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + r * 0.12, cy - r * 0.2, r * 0.03, 0, Math.PI * 2); ctx.fill();
+
+  // === EYES (big, bulging, on top of head like a real frog) ===
+  const eyeR = r * 0.22;
+  const eyeY = cy - r * 0.48;
+  const eyeSpacing = r * 0.32;
+  // Eye bump (bulge out from head)
+  ctx.fillStyle = bodyColor;
+  ctx.beginPath(); ctx.arc(cx - eyeSpacing, eyeY, eyeR * 1.15, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + eyeSpacing, eyeY, eyeR * 1.15, 0, Math.PI * 2); ctx.fill();
   // Eye whites
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = '#fffff0';
   ctx.beginPath(); ctx.arc(cx - eyeSpacing, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(cx + eyeSpacing, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
-  // Pupils
+  // Iris (colored ring)
+  const irisR = eyeR * 0.7;
+  ctx.fillStyle = f.dark ? '#8040c0' : '#886614';
+  ctx.beginPath(); ctx.arc(cx - eyeSpacing, eyeY + r * 0.02, irisR, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + eyeSpacing, eyeY + r * 0.02, irisR, 0, Math.PI * 2); ctx.fill();
+  // Pupils (vertical slit like a real frog)
   ctx.fillStyle = '#111';
-  const pupilR = eyeR * 0.55;
-  ctx.beginPath(); ctx.arc(cx - eyeSpacing, eyeY + 1, pupilR, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx + eyeSpacing, eyeY + 1, pupilR, 0, Math.PI * 2); ctx.fill();
+  const pupilW = eyeR * 0.25;
+  const pupilH = eyeR * 0.6;
+  ctx.beginPath(); ctx.ellipse(cx - eyeSpacing, eyeY + r * 0.02, pupilW, pupilH, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + eyeSpacing, eyeY + r * 0.02, pupilW, pupilH, 0, 0, Math.PI * 2); ctx.fill();
   // Eye highlight
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.beginPath(); ctx.arc(cx - eyeSpacing - 1.5, eyeY - 1.5, pupilR * 0.45, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx + eyeSpacing - 1.5, eyeY - 1.5, pupilR * 0.45, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.beginPath(); ctx.arc(cx - eyeSpacing - eyeR * 0.2, eyeY - eyeR * 0.25, eyeR * 0.25, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + eyeSpacing - eyeR * 0.2, eyeY - eyeR * 0.25, eyeR * 0.25, 0, Math.PI * 2); ctx.fill();
 
-  // Crown
+  // === CROWN ===
   if (f.crown) {
-    const crY = cy - r * 0.55;
-    const crW = r * 0.4;
-    const crH = r * 0.28;
+    const crY = eyeY - eyeR * 1.1;
+    const crW = r * 0.35;
+    const crH = r * 0.25;
     ctx.fillStyle = f.rainbow ? `hsl(${((time * 100) + 60) % 360}, 90%, 60%)` : '#ffd93d';
     ctx.beginPath();
-    ctx.moveTo(cx - crW, crY);
-    ctx.lineTo(cx - crW * 0.6, crY - crH * 0.6);
-    ctx.lineTo(cx - crW * 0.2, crY);
+    ctx.moveTo(cx - crW, crY + crH * 0.3);
+    ctx.lineTo(cx - crW * 0.6, crY - crH * 0.4);
+    ctx.lineTo(cx - crW * 0.2, crY + crH * 0.1);
     ctx.lineTo(cx, crY - crH);
-    ctx.lineTo(cx + crW * 0.2, crY);
-    ctx.lineTo(cx + crW * 0.6, crY - crH * 0.6);
-    ctx.lineTo(cx + crW, crY);
+    ctx.lineTo(cx + crW * 0.2, crY + crH * 0.1);
+    ctx.lineTo(cx + crW * 0.6, crY - crH * 0.4);
+    ctx.lineTo(cx + crW, crY + crH * 0.3);
     ctx.closePath();
     ctx.fill();
+    // Crown outline
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
     // Crown gems
     ctx.fillStyle = '#e04060';
-    ctx.beginPath(); ctx.arc(cx, crY - crH * 0.7, 1.8, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, crY - crH * 0.65, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#4080ff';
+    ctx.beginPath(); ctx.arc(cx - crW * 0.55, crY - crH * 0.1, 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + crW * 0.55, crY - crH * 0.1, 1.5, 0, Math.PI * 2); ctx.fill();
   }
 
-  // Number label
+  // === NUMBER LABEL (on belly) ===
   ctx.fillStyle = f.dark ? '#fff' : '#000';
-  ctx.font = `bold ${Math.round(r * 0.95)}px ${getComputedStyle(document.body).fontFamily}`;
+  ctx.font = `bold ${Math.round(r * 0.45)}px ${getComputedStyle(document.body).fontFamily}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(f.name, cx, cy + r * 0.12);
+  ctx.fillText(f.name, cx, cy + r * 0.15);
 }
 
 function drawGrid() {
