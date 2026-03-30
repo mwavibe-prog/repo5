@@ -61,7 +61,7 @@ h1 {
   margin-bottom: 6px;
 }
 .next-area .label { font-size: 0.75em; color: var(--muted); }
-#next-canvas { width: 44px; height: 44px; }
+#next-canvas { width: 72px; height: 72px; }
 .grid-outer {
   background: var(--grid-bg);
   border: 2px solid var(--border);
@@ -147,7 +147,7 @@ h1 {
   </div>
   <div class="next-area">
     <span class="label">Next:</span>
-    <canvas id="next-canvas" width="44" height="44"></canvas>
+    <canvas id="next-canvas" width="72" height="72"></canvas>
   </div>
   <div class="score-box">
     <div class="label">Best</div>
@@ -509,11 +509,16 @@ function drawFrog(ctx, cx, cy, radius, level, time) {
     ctx.beginPath(); ctx.arc(cx + crW * 0.55, crY - crH * 0.1, 1.5, 0, Math.PI * 2); ctx.fill();
   }
 
-  // === NUMBER LABEL (on belly) ===
-  ctx.fillStyle = f.dark ? '#fff' : '#000';
-  ctx.font = `bold ${Math.round(r * 0.75)}px ${getComputedStyle(document.body).fontFamily}`;
+  // === NUMBER LABEL (on belly, with outline for clarity) ===
+  const fontSize = Math.round(r * 0.75);
+  ctx.font = `bold ${fontSize}px ${getComputedStyle(document.body).fontFamily}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  ctx.strokeStyle = f.dark ? '#000' : '#fff';
+  ctx.lineWidth = Math.max(2, fontSize * 0.15);
+  ctx.lineJoin = 'round';
+  ctx.strokeText(f.name, cx, cy + r * 0.15);
+  ctx.fillStyle = f.dark ? '#fff' : '#000';
   ctx.fillText(f.name, cx, cy + r * 0.15);
 }
 
@@ -631,10 +636,10 @@ function drawGrid() {
 
 function drawNext() {
   const ctx = nextCtx;
-  ctx.clearRect(0, 0, 44, 44);
+  ctx.clearRect(0, 0, 72, 72);
   if (nextFrog) {
-    const r = 16 * (FROGS[nextFrog] ? FROGS[nextFrog].size : 0.5);
-    drawFrog(ctx, 22, 22, r, nextFrog, performance.now() / 1000);
+    const r = 28 * (FROGS[nextFrog] ? FROGS[nextFrog].size : 0.5);
+    drawFrog(ctx, 36, 36, r, nextFrog, performance.now() / 1000);
   }
 }
 
