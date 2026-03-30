@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Frog Merge</title>
+<style>
+:root {
+  --bg: #0a1a0f;
+  --panel: #111f14;
+  --border: #1e3d24;
+  --grid-bg: #0d2212;
+  --cell-bg: #152b1a;
+  --glow: #4ade80;
+  --text: #d4f0dc;
+  --muted: #5a8a65;
+  --gold: #ffd93d;
+  --font: 'Courier New', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  overflow-x: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+h1 {
+  font-size: 1.6em;
+  color: var(--glow);
+  margin: 10px 0 4px;
+  text-shadow: 0 0 12px rgba(74,222,128,0.4);
+  letter-spacing: 2px;
+}
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+.score-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 14px;
+  text-align: center;
+  min-width: 80px;
+}
+.score-box .label { font-size: 0.65em; color: var(--muted); text-transform: uppercase; }
+.score-box .value { font-size: 1.2em; color: var(--gold); font-weight: bold; }
+.next-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.next-area .label { font-size: 0.75em; color: var(--muted); }
+#next-canvas { width: 44px; height: 44px; }
+.grid-outer {
+  background: var(--grid-bg);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  position: relative;
+  touch-action: none;
+}
+#grid-canvas { display: block; border-radius: 6px; }
+.controls {
+  display: flex; gap: 10px; margin: 10px 0;
+}
+.btn {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 18px;
+  font-family: var(--font);
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn:hover { background: var(--border); }
+.btn:active { background: var(--glow); color: var(--bg); }
+.legend {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 8px 0 14px;
+  max-width: 360px;
+  width: 100%;
+}
+.legend-title { font-size: 0.75em; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+.legend-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.legend-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.legend-item canvas { width: 36px; height: 36px; border-radius: 4px; }
+.legend-item .lname { font-size: 0.55em; color: var(--muted); }
+.legend-item.locked canvas { opacity: 0.2; filter: grayscale(1); }
+.legend-item.locked .lname { opacity: 0.3; }
+.hint { font-size: 0.65em; color: var(--muted); margin-bottom: 8px; }
+/* Game Over modal */
+.modal-overlay {
+  display: none;
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 100;
+  justify-content: center;
+  align-items: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--panel);
+  border: 2px solid var(--glow);
+  border-radius: 14px;
+  padding: 28px 36px;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(74,222,128,0.3);
+}
+.modal h2 { color: var(--glow); margin-bottom: 10px; }
+.modal .final-score { font-size: 2em; color: var(--gold); margin: 8px 0; }
+.modal .btn { margin-top: 14px; font-size: 1em; padding: 8px 28px; }
+</style>
+</head>
+<body>
+
+<h1>FROG MERGE</h1>
+
+<div class="header">
+  <div class="score-box">
+    <div class="label">Score</div>
+    <div class="value" id="score-val">0</div>
+  </div>
+  <div class="next-area">
+    <span class="label">Next:</span>
+    <canvas id="next-canvas" width="44" height="44"></canvas>
+  </div>
+  <div class="score-box">
+    <div class="label">Best</div>
+    <div class="value" id="best-val">0</div>
+  </div>
+</div>
+
+<div class="grid-outer" id="grid-outer">
+  <canvas id="grid-canvas"></canvas>
+</div>
+
+<div class="controls">
+  <button class="btn" id="undo-btn">Undo</button>
+  <button class="btn" id="new-btn">New Game</button>
+</div>
+
+<div class="hint">Drag &amp; drop to place frogs. Match two to merge!</div>
+
+<div class="legend">
+  <div class="legend-title">Frog Evolution</div>
+  <div class="legend-grid" id="legend-grid"></div>
+</div>
+
+<div class="modal-overlay" id="game-over-modal">
+  <div class="modal">
+    <h2>Game Over!</h2>
+    <div>Final Score</div>
+    <div class="final-score" id="final-score">0</div>
+    <button class="btn" id="restart-btn">Play Again</button>
+  </div>
+</div>
+
+<script>
+// === Frog species ===
+const FROGS = [
+  null, // index 0 unused
+  { name: '1',  body: '#6dbf7a', belly: '#a8e6b0', score: 2,    size: 0.55, shimmer: false, crown: false, dark: false, rainbow: false, cosmic: false },
+  { name: '2',  body: '#4cae5c', belly: '#8fd99a', score: 4,    size: 0.58, shimmer: false, crown: false, dark: false, rainbow: false, cosmic: false },
+  { name: '3',  body: '#3a9e50', belly: '#7dcc8a', score: 8,    size: 0.61, shimmer: false, crown: false, dark: false, rainbow: false, cosmic: false },
+  { name: '4',  body: '#2d8c42', belly: '#6bc07a', score: 16,   size: 0.64, shimmer: false, crown: false, dark: false, rainbow: false, cosmic: false },
+  { name: '5',  body: '#1e7a34', belly: '#5ab56a', score: 32,   size: 0.67, shimmer: false, crown: false, dark: false, rainbow: false, cosmic: false },
+  { name: '6',  body: '#40c8e0', belly: '#80e0f0', score: 64,   size: 0.70, shimmer: true,  crown: false, dark: false, rainbow: false, cosmic: false },
+  { name: '7',  body: '#f5c842', belly: '#ffe080', score: 128,  size: 0.73, shimmer: true,  crown: true,  dark: false, rainbow: false, cosmic: false },
+  { name: '8',  body: '#e04060', belly: '#f08090', score: 256,  size: 0.76, shimmer: true,  crown: true,  dark: false, rainbow: false, cosmic: false },
+  { name: '9',  body: '#4060e0', belly: '#8090f0', score: 512,  size: 0.79, shimmer: true,  crown: true,  dark: false, rainbow: false, cosmic: false },
+  { name: '10', body: '#2a1a3a', belly: '#5a3a6a', score: 1024, size: 0.82, shimmer: true,  crown: true,  dark: true,  rainbow: false, cosmic: false },
+  { name: '11', body: '#ff6060', belly: '#ff9090', score: 2048, size: 0.86, shimmer: false, crown: true,  dark: false, rainbow: true,  cosmic: false },
+  { name: '12', body: '#0a0520', belly: '#2a1550', score: 4096, size: 0.90, shimmer: false, crown: true,  dark: false, rainbow: true,  cosmic: true  },
+];
+
+// === Constants ===
+const COLS = 7, ROWS = 12;
+const DROP_SPEED = 0.04;
+const MERGE_DELAY = 80;
+const MAX_UNDO = 10;
+
+// === State ===
+let grid, score, best, nextFrog, dropping, dragging, merging, particles;
+let undoStack, discovered, gameOver, animFrame;
+let CELL, canvasW, canvasH;
+
+// === DOM refs ===
+const gridCanvas = document.getElementById('grid-canvas');
+const gridCtx = gridCanvas.getContext('2d');
+const nextCanvas = document.getElementById('next-canvas');
+const nextCtx = nextCanvas.getContext('2d');
+const gridOuter = document.getElementById('grid-outer');
+const scoreEl = document.getElementById('score-val');
+const bestEl = document.getElementById('best-val');
+const modalOverlay = document.getElementById('game-over-modal');
+const finalScoreEl = document.getElementById('final-score');
+
+// === Init ===
+function init() {
+  grid = [];
+  for (let c = 0; c < COLS; c++) grid[c] = [];
+  score = 0;
+  best = parseInt(localStorage.getItem('frogmerge_best') || '0');
+  nextFrog = randomNext();
+  dropping = null;
+  dragging = null;
+  merging = [];
+  particles = [];
+  undoStack = [];
+  discovered = new Set([1, 2, 3]);
+  gameOver = false;
+  updateScore();
+  buildLegend();
+  drawNext();
+  resizeCanvas();
+}
+
+function randomNext() {
+  // Weighted: lower tiers much more likely
+  const weights = [0, 40, 30, 18, 8, 4];
+  let total = 0;
+  for (let i = 1; i < weights.length; i++) total += weights[i];
+  let r = Math.random() * total;
+  for (let i = 1; i < weights.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return i;
+  }
+  return 1;
+}
+
+function resizeCanvas() {
+  const maxW = Math.min(window.innerWidth - 16, 380);
+  CELL = Math.floor(maxW / COLS);
+  canvasW = CELL * COLS;
+  canvasH = CELL * ROWS;
+  gridCanvas.width = canvasW;
+  gridCanvas.height = canvasH;
+  gridCanvas.style.width = canvasW + 'px';
+  gridCanvas.style.height = canvasH + 'px';
+}
+
+// === Drawing ===
+function drawFrog(ctx, cx, cy, radius, level, time) {
+  const f = FROGS[level];
+  if (!f) return;
+  const r = radius;
+  let bodyColor = f.body;
+  let bellyColor = f.belly;
+
+  // Rainbow override
+  if (f.rainbow) {
+    const hue = (time * 120 + level * 30) % 360;
+    bodyColor = `hsl(${hue}, 80%, 55%)`;
+    bellyColor = `hsl(${(hue + 40) % 360}, 80%, 75%)`;
+  }
+
+  // Cosmic background glow
+  if (f.cosmic) {
+    const grd = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r * 1.8);
+    grd.addColorStop(0, 'rgba(100, 0, 255, 0.3)');
+    grd.addColorStop(0.5, 'rgba(0, 0, 80, 0.15)');
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    // Stars
+    for (let i = 0; i < 6; i++) {
+      const a = (time * 0.5 + i * 1.05) % (Math.PI * 2);
+      const d = r * (1.1 + 0.3 * Math.sin(time * 2 + i));
+      const sx = cx + Math.cos(a) * d;
+      const sy = cy + Math.sin(a) * d;
+      ctx.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(time * 3 + i)})`;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Back legs
+  ctx.fillStyle = bodyColor;
+  const legW = r * 0.3, legH = r * 0.22;
+  ctx.beginPath();
+  ctx.ellipse(cx - r * 0.65, cy + r * 0.55, legW, legH, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx + r * 0.65, cy + r * 0.55, legW, legH, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Front legs
+  ctx.beginPath();
+  ctx.ellipse(cx - r * 0.55, cy + r * 0.35, legW * 0.7, legH * 0.7, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx + r * 0.55, cy + r * 0.35, legW * 0.7, legH * 0.7, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Body
+  ctx.fillStyle = bodyColor;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, r * 0.72, r * 0.62, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Dark tint overlay
+  if (f.dark) {
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, r * 0.72, r * 0.62, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Belly
+  ctx.fillStyle = bellyColor;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + r * 0.1, r * 0.45, r * 0.38, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Shimmer
+  if (f.shimmer) {
+    const shimX = cx - r * 0.2 + Math.sin(time * 3) * r * 0.15;
+    const shimY = cy - r * 0.15;
+    const grad = ctx.createRadialGradient(shimX, shimY, 0, shimX, shimY, r * 0.35);
+    grad.addColorStop(0, 'rgba(255,255,255,0.35)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(shimX, shimY, r * 0.35, r * 0.2, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Eyes
+  const eyeR = r * 0.16;
+  const eyeY = cy - r * 0.22;
+  const eyeSpacing = r * 0.28;
+  // Eye whites
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(cx - eyeSpacing, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + eyeSpacing, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+  // Pupils
+  ctx.fillStyle = '#111';
+  const pupilR = eyeR * 0.55;
+  ctx.beginPath(); ctx.arc(cx - eyeSpacing, eyeY + 1, pupilR, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + eyeSpacing, eyeY + 1, pupilR, 0, Math.PI * 2); ctx.fill();
+  // Eye highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.beginPath(); ctx.arc(cx - eyeSpacing - 1.5, eyeY - 1.5, pupilR * 0.45, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + eyeSpacing - 1.5, eyeY - 1.5, pupilR * 0.45, 0, Math.PI * 2); ctx.fill();
+
+  // Crown
+  if (f.crown) {
+    const crY = cy - r * 0.55;
+    const crW = r * 0.4;
+    const crH = r * 0.28;
+    ctx.fillStyle = f.rainbow ? `hsl(${((time * 100) + 60) % 360}, 90%, 60%)` : '#ffd93d';
+    ctx.beginPath();
+    ctx.moveTo(cx - crW, crY);
+    ctx.lineTo(cx - crW * 0.6, crY - crH * 0.6);
+    ctx.lineTo(cx - crW * 0.2, crY);
+    ctx.lineTo(cx, crY - crH);
+    ctx.lineTo(cx + crW * 0.2, crY);
+    ctx.lineTo(cx + crW * 0.6, crY - crH * 0.6);
+    ctx.lineTo(cx + crW, crY);
+    ctx.closePath();
+    ctx.fill();
+    // Crown gems
+    ctx.fillStyle = '#e04060';
+    ctx.beginPath(); ctx.arc(cx, crY - crH * 0.7, 1.8, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Number label
+  ctx.fillStyle = f.dark ? '#fff' : '#000';
+  ctx.font = `bold ${Math.round(r * 0.42)}px ${getComputedStyle(document.body).fontFamily}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(f.name, cx, cy + r * 0.12);
+}
+
+function drawGrid() {
+  const ctx = gridCtx;
+  const time = performance.now() / 1000;
+  ctx.clearRect(0, 0, canvasW, canvasH);
+
+  // Draw cells
+  for (let c = 0; c < COLS; c++) {
+    for (let r = 0; r < ROWS; r++) {
+      const x = c * CELL, y = (ROWS - 1 - r) * CELL;
+      ctx.fillStyle = '#152b1a';
+      ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+    }
+  }
+
+  // Column highlight when dragging
+  if (dragging) {
+    const col = Math.floor(dragging.x / CELL);
+    if (col >= 0 && col < COLS) {
+      ctx.fillStyle = 'rgba(74, 222, 128, 0.08)';
+      ctx.fillRect(col * CELL, 0, CELL, canvasH);
+      // Guide line
+      const targetRow = grid[col].length;
+      if (targetRow < ROWS) {
+        const guideY = (ROWS - 1 - targetRow) * CELL + CELL / 2;
+        ctx.strokeStyle = 'rgba(74, 222, 128, 0.3)';
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(col * CELL + 2, guideY);
+        ctx.lineTo((col + 1) * CELL - 2, guideY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+  }
+
+  // Draw placed frogs
+  for (let c = 0; c < COLS; c++) {
+    for (let r = 0; r < grid[c].length; r++) {
+      const level = grid[c][r];
+      if (level === 0) continue;
+      // Check if this cell is in merging flash
+      let flash = false;
+      for (const m of merging) {
+        if (m.col === c && m.row === r) { flash = true; break; }
+      }
+      const cx = c * CELL + CELL / 2;
+      const cy = (ROWS - 1 - r) * CELL + CELL / 2;
+      const frogR = (CELL / 2) * (FROGS[level] ? FROGS[level].size : 0.5);
+
+      if (flash) {
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, CELL / 2 - 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      drawFrog(ctx, cx, cy, frogR, level, time);
+    }
+  }
+
+  // Drop animation
+  if (dropping) {
+    const targetY = (ROWS - 1 - dropping.toRow) * CELL + CELL / 2;
+    const curY = dropping.startY + (targetY - dropping.startY) * easeOut(dropping.t);
+    const cx = dropping.col * CELL + CELL / 2;
+    const level = dropping.level;
+    const frogR = (CELL / 2) * (FROGS[level] ? FROGS[level].size : 0.5);
+    // Squish on land
+    let scaleX = 1, scaleY = 1;
+    if (dropping.t > 0.85) {
+      const squish = (dropping.t - 0.85) / 0.15;
+      scaleX = 1 + squish * 0.15;
+      scaleY = 1 - squish * 0.1;
+    }
+    ctx.save();
+    ctx.translate(cx, curY);
+    ctx.scale(scaleX, scaleY);
+    drawFrog(ctx, 0, 0, frogR, level, time);
+    ctx.restore();
+  }
+
+  // Drag ghost
+  if (dragging) {
+    const level = dragging.level;
+    const frogR = (CELL / 2) * (FROGS[level] ? FROGS[level].size : 0.5);
+    ctx.globalAlpha = 0.8;
+    drawFrog(ctx, dragging.x, dragging.y, frogR * (dragging.scaleAnim || 1), level, time);
+    ctx.globalAlpha = 1;
+  }
+
+  // Particles
+  for (const p of particles) {
+    ctx.globalAlpha = p.life / p.maxLife;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Score popups
+  for (const p of particles) {
+    if (p.text) {
+      ctx.globalAlpha = p.life / p.maxLife;
+      ctx.fillStyle = '#ffd93d';
+      ctx.font = `bold ${p.fontSize || 14}px ${getComputedStyle(document.body).fontFamily}`;
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
+function drawNext() {
+  const ctx = nextCtx;
+  ctx.clearRect(0, 0, 44, 44);
+  if (nextFrog) {
+    const r = 16 * (FROGS[nextFrog] ? FROGS[nextFrog].size : 0.5);
+    drawFrog(ctx, 22, 22, r, nextFrog, performance.now() / 1000);
+  }
+}
+
+function easeOut(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+// === Score ===
+function updateScore() {
+  scoreEl.textContent = score;
+  if (score > best) {
+    best = score;
+    localStorage.setItem('frogmerge_best', best);
+  }
+  bestEl.textContent = best;
+}
+
+// === Input handling ===
+function getCanvasPos(e) {
+  const rect = gridCanvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) * (gridCanvas.width / rect.width),
+    y: (clientY - rect.top) * (gridCanvas.height / rect.height)
+  };
+}
+
+function onPointerDown(e) {
+  if (gameOver || dropping || merging.length > 0) return;
+  e.preventDefault();
+  const pos = getCanvasPos(e);
+  dragging = { x: pos.x, y: pos.y, level: nextFrog, scaleAnim: 0.5 };
+}
+
+function onPointerMove(e) {
+  if (!dragging) return;
+  e.preventDefault();
+  const pos = getCanvasPos(e);
+  dragging.x = pos.x;
+  dragging.y = pos.y;
+  if (dragging.scaleAnim < 1) dragging.scaleAnim = Math.min(1, dragging.scaleAnim + 0.1);
+}
+
+function onPointerUp(e) {
+  if (!dragging) return;
+  e.preventDefault();
+  const col = Math.floor(dragging.x / CELL);
+  const level = dragging.level;
+  dragging = null;
+
+  if (col < 0 || col >= COLS) return;
+  if (grid[col].length >= ROWS) return;
+  dropFrog(col, level);
+}
+
+gridCanvas.addEventListener('mousedown', onPointerDown);
+gridCanvas.addEventListener('mousemove', onPointerMove);
+gridCanvas.addEventListener('mouseup', onPointerUp);
+gridCanvas.addEventListener('mouseleave', (e) => { if (dragging) { dragging = null; } });
+gridCanvas.addEventListener('touchstart', onPointerDown, { passive: false });
+gridCanvas.addEventListener('touchmove', onPointerMove, { passive: false });
+gridCanvas.addEventListener('touchend', onPointerUp, { passive: false });
+
+// Prevent scroll on touch
+document.addEventListener('touchmove', (e) => {
+  if (dragging) e.preventDefault();
+}, { passive: false });
+
+// === Drop logic ===
+function dropFrog(col, level) {
+  // Save undo state
+  saveUndo();
+
+  const toRow = grid[col].length;
+  dropping = {
+    col: col,
+    toRow: toRow,
+    level: level,
+    t: 0,
+    startY: -CELL / 2
+  };
+  nextFrog = randomNext();
+  drawNext();
+}
+
+function landFrog() {
+  if (!dropping) return;
+  grid[dropping.col][dropping.toRow] = dropping.level;
+  const col = dropping.col;
+  dropping = null;
+  checkMerge(col);
+  checkGameOver();
+}
+
+// === Merge logic ===
+function checkMerge(col) {
+  if (col < 0 || col >= COLS) return;
+  for (let r = 0; r < grid[col].length - 1; r++) {
+    if (grid[col][r] !== 0 && grid[col][r] === grid[col][r + 1] && grid[col][r] < 12) {
+      doMerge(col, r);
+      return;
+    }
+  }
+}
+
+function doMerge(col, row) {
+  const level = grid[col][row];
+  const newLevel = level + 1;
+  const frog = FROGS[newLevel];
+
+  // Flash effect
+  merging.push({ col: col, row: row, t: 0 });
+  merging.push({ col: col, row: row + 1, t: 0 });
+
+  setTimeout(() => {
+    // Remove the two frogs and insert merged
+    grid[col].splice(row, 2, newLevel);
+
+    // Score
+    score += frog.score;
+    updateScore();
+    discovered.add(newLevel);
+    buildLegend();
+
+    // Spawn particles
+    const cx = col * CELL + CELL / 2;
+    const cy = (ROWS - 1 - row) * CELL + CELL / 2;
+    spawnParticles(cx, cy, frog.body);
+    spawnScorePopup(cx, cy - CELL * 0.4, '+' + frog.score);
+
+    merging = [];
+
+    // Chain merge
+    setTimeout(() => checkMerge(col), MERGE_DELAY);
+  }, 150);
+}
+
+function spawnParticles(x, y, color) {
+  for (let i = 0; i < 12; i++) {
+    const angle = (Math.PI * 2 / 12) * i + Math.random() * 0.3;
+    const speed = 1.5 + Math.random() * 2.5;
+    particles.push({
+      x: x, y: y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      r: 2 + Math.random() * 2,
+      color: color,
+      life: 1,
+      maxLife: 1,
+      text: null
+    });
+  }
+}
+
+function spawnScorePopup(x, y, text) {
+  particles.push({
+    x: x, y: y,
+    vx: 0, vy: -0.8,
+    r: 0, color: '#ffd93d',
+    life: 1.5, maxLife: 1.5,
+    text: text,
+    fontSize: 16
+  });
+}
+
+// === Game over ===
+function checkGameOver() {
+  for (let c = 0; c < COLS; c++) {
+    if (grid[c].length < ROWS) return;
+  }
+  gameOver = true;
+  finalScoreEl.textContent = score;
+  modalOverlay.classList.add('show');
+}
+
+// === Undo ===
+function saveUndo() {
+  const snap = {
+    grid: grid.map(col => col.slice()),
+    score: score,
+    nextFrog: nextFrog,
+    discovered: new Set(discovered)
+  };
+  undoStack.push(snap);
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+}
+
+function doUndo() {
+  if (undoStack.length === 0 || dropping || merging.length > 0) return;
+  const snap = undoStack.pop();
+  grid = snap.grid;
+  score = snap.score;
+  nextFrog = snap.nextFrog;
+  discovered = snap.discovered;
+  updateScore();
+  drawNext();
+  buildLegend();
+}
+
+// === Legend ===
+function buildLegend() {
+  const container = document.getElementById('legend-grid');
+  container.innerHTML = '';
+  for (let i = 1; i <= 12; i++) {
+    const item = document.createElement('div');
+    item.className = 'legend-item' + (discovered.has(i) ? '' : ' locked');
+    const c = document.createElement('canvas');
+    c.width = 36; c.height = 36;
+    const ctx = c.getContext('2d');
+    const r = 13 * (FROGS[i].size);
+    drawFrog(ctx, 18, 18, r, i, performance.now() / 1000);
+    const label = document.createElement('span');
+    label.className = 'lname';
+    label.textContent = discovered.has(i) ? FROGS[i].name : '?';
+    item.appendChild(c);
+    item.appendChild(label);
+    container.appendChild(item);
+  }
+}
+
+// === Main loop ===
+function loop() {
+  // Update drop animation
+  if (dropping) {
+    dropping.t += DROP_SPEED;
+    if (dropping.t >= 1) {
+      dropping.t = 1;
+      landFrog();
+    }
+  }
+
+  // Update particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life -= 0.02;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  // Update merging flash
+  for (const m of merging) {
+    m.t += 0.05;
+  }
+
+  drawGrid();
+  drawNext();
+  animFrame = requestAnimationFrame(loop);
+}
+
+// === Button wiring ===
+document.getElementById('undo-btn').addEventListener('click', doUndo);
+document.getElementById('new-btn').addEventListener('click', () => {
+  modalOverlay.classList.remove('show');
+  init();
+});
+document.getElementById('restart-btn').addEventListener('click', () => {
+  modalOverlay.classList.remove('show');
+  init();
+});
+
+// === Resize handler ===
+window.addEventListener('resize', () => {
+  resizeCanvas();
+});
+
+// === Start ===
+init();
+loop();
+</script>
+</body>
+</html>
